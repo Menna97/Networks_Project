@@ -37,8 +37,28 @@ struct pkt {
 
 /********* STUDENTS WRITE THE NEXT SEVEN ROUTINES *********/
 
+#define DEBUG 1
+int seq_expect_send;	// Next sequence number of A 
+int seq_expect_recv;	// Next sequence number of B 
+int is_waiting;			// Whether side A is waiting 
+struct pkt waiting_packet;	// Packet hold in A 
 
 /* called from layer 5, passed the data to be sent to other side */
+
+
+	int checksum(struct pkt packet)
+	{
+		int check_s = 0;
+		for (int i = 0; i < 20; i++)
+		{
+			check_s += packet.payload[i];
+		}
+		check_s += packet.seqnum;
+		check_s += packet.acknum;
+		return check_s;
+	}
+}
+
 A_output(message)
   struct msg message;
 {
@@ -47,16 +67,33 @@ A_output(message)
   i=0;
   j=0;
 
+  // If A is waiting, ignore the message 
+  if (is_waiting)
+	  return;
   printf("now in A_output\n");
 
-  for (i=0; i< 20; i++)
-    {
-      j = j+ (int) message.data[i];
+  // Send packet to B side 
 
-    }
-  printf ("j is %d %d\n", j, (int)('a'));
+  memcpy(waiting_packet.payload, message.data, sizeof(message.data));
+  waiting_packet.seqnum = seq_expect_send;
+  waiting_packet.checksum = 0;
+  waiting_packet.checksum = checksum(waiting_packet);
+  tolayer3(0, waiting_packet);
+  starttimer(0, TIME_OUT);
+  is_waiting = 1;
 
+  // Debug output 
+  if (DEBUG) {
+
+	  for (i = 0; i < 20; i++)
+	  {
+		  j = j + (int)message.data[i];
+
+	  }
+	  printf("j is %d %d\n", j, (int)('a'));
+  }
 }
+
 
 B_output(message)  /* need be completed only for extra credit */
   struct msg message;
